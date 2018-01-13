@@ -1,0 +1,11 @@
+{
+  "name": "cryptocurrency-bot",
+  "version": "1.0.0",
+  "description": "cryptocurrency bot that checks prices, exchange data, set alerts, and more",
+  "main": "bot.js",
+  "author": "Rob Aleman",
+  "dependencies": {
+    "discord.io": "github:woor/discord.io#gateway_v6",
+    "node-binance-api": "^0.3.7"
+  }
+}
