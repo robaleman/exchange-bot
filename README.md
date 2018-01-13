@@ -15,5 +15,6 @@ Your bot should be ready to go.
 ## Commands
 
 `!help` provides a list of commands available to the user
+
 `!vol <MARKET>` returns the current 24-hour volume of a specified market on Binance 
 
