@@ -36,27 +36,27 @@ ichi.check <- function(cloud.data) {
   close <- cloud.data[1,9]
   
   if (close > spanA & spanA > spanB) {
-    return("Litecoin is above the green cloud. Uptrending market.")
+    return(" is above the green cloud. Uptrending market.")
   }
   
   if (spanA > close & close > spanB) {
-    return("Litecoin is currently inside the green cloud. Careful trading.")
+    return(" is currently inside the green cloud. Careful trading.")
   }
   
   if (spanA > spanB & spanB > close) {
-    return("Litecoin is below the green cloud! Resistance ahead.")
+    return(" is below the green cloud! Possible resistance ahead.")
   }
   
   if (spanB > spanA & spanA > close) {
-    return("Litecoin is below the red cloud. Downtrending market.")
+    return(" is below the red cloud. Downtrending market.")
   }
   
   if (spanB > close & close > spanA) {
-    return("Litecoin is inside the red cloud. Careful trading.")
+    return(" is inside the red cloud. Careful trading.")
   }
   
   if (close > spanB & spanB > spanA) {
-    return("Litecoin is above the red cloud! Resistance ahead.")
+    return(" is above the red cloud! Possible resistance ahead.")
   }
 }
 
