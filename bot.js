@@ -27,7 +27,6 @@ binance.options({
 
 
 
-
 //-----------------------
 //-----------------------
 // COMMAND FUNCTIONS
@@ -70,6 +69,7 @@ function check_ichimoku(market="ETHBTC", channelID) {
     bot.sendMessage({to: channelID, message: market + analysis});
   }, {limit: 1, endTime: 1514764800000});
 }
+
 
 
 //-----------------------
@@ -124,7 +124,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
           check_volume(market, channelID)
          }
 
-         // volume command
+         // ichimoku command
          if (command == "ichi") {
            var market = param
            check_ichimoku(market, channelID)
