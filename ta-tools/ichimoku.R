@@ -1,22 +1,22 @@
-# import library; suppressMessage is needed to avoid a bug in r-script package
+# This is a basic implementation of the Ichimoku Cloud trading strategy, along with 
+# some associated fuctions used for chart interpretation. 
+# 
+# This script is loaded using the NPM package 'r-script' which runs R code on Node.js
+# platforms. Data from Node is automatically loaded at the beginning of this script as the
+# variable 'input' in the form of an array.
+
 suppressMessages(library(jsonlite))
 suppressMessages(library(caTools))
 suppressMessages(library(quantmod))
 
-# loads stringified JSON (input[[1]]) recieved from Node
-data <- fromJSON(input[[1]])
-colnames(data) <- c("time", "open", "high", "low", "close", "volume", "closeTime", "assetVolume", "trades", "buyBaseVolume", "buyAssetVolume", "ignored")
 
-
-HLC = cbind(data["high"], data["low"], data["close"])
-
-# function that calculates ichimoku lines
+# calculates Ichimoku chart lines
 ichimoku <- function(HLC, nFast=20, nMed=60, nSlow=120) {
-  turningLine <- (runmax(Hi(HLC), nFast)+runmin(Lo(HLC), nFast))/2
-  baseLine <- (runmax(Hi(HLC), nMed)+runmin(Lo(HLC), nMed))/2
-  spanA <- lag((turningLine+baseLine)/2, nMed)
-  spanB <- lag((runmax(Hi(HLC), nSlow)+runmin(Lo(HLC), nSlow))/2, nMed)
-  plotSpan <- lag(Cl(HLC), -nMed) #for plotting the original Ichimoku only
+  turningLine <- (runmax(Hi(HLC), nFast) + runmin(Lo(HLC), nFast))/2
+  baseLine <- (runmax(Hi(HLC), nMed) + runmin(Lo(HLC), nMed))/2
+  spanA <- lag((turningLine + baseLine)/2, nMed)
+  spanB <- lag((runmax(Hi(HLC), nSlow) + runmin(Lo(HLC), nSlow))/2, nMed)
+  plotSpan <- lag(Cl(HLC), -nMed)
   laggingSpan <- lag(Cl(HLC), nMed)
   lagSpanA <- lag(spanA, nMed)
   lagSpanB <- lag(spanB, nMed)
@@ -26,41 +26,99 @@ ichimoku <- function(HLC, nFast=20, nMed=60, nSlow=120) {
                lagSpanB=lagSpanB)
   colnames(out) <- c("turnLine", "baseLine", "spanA", "spanB", "plotLagSpan", 
                      "laggingSpan", "lagSpanA","lagSpanB")
-  return (out)
+  return(out)
 }
 
-# function that compares current price to Ichimoku clouds 
-ichi.check <- function(cloud.data) {
-  spanA <- cloud.data[1,3]
-  spanB <- cloud.data[1,4]
-  close <- cloud.data[1,9]
+
+# compares candle 'close'  relative to Ichimoku chart lines
+ichi.candle.check <- function(cloud.data) {
+  spanA <- cloud.data[3]
+  spanB <- cloud.data[4]
+  close <- cloud.data[9]
   
   if (close > spanA & spanA > spanB) {
-    return(" is above the green cloud. Uptrending market.")
+    return("above green cloud")
   }
   
   if (spanA > close & close > spanB) {
-    return(" is currently inside the green cloud. Careful trading.")
+    return("inside green cloud")
   }
   
   if (spanA > spanB & spanB > close) {
-    return(" is below the green cloud! Possible resistance ahead.")
+    return("below green cloud")
   }
   
   if (spanB > spanA & spanA > close) {
-    return(" is below the red cloud. Downtrending market.")
+    return("below red cloud")
   }
   
   if (spanB > close & close > spanA) {
-    return(" is inside the red cloud. Careful trading.")
+    return("inside red cloud")
   }
   
   if (close > spanB & spanB > spanA) {
-    return(" is above the red cloud! Possible resistance ahead.")
+    return("above red cloud")
   }
 }
 
-# runs functions
+
+# compares current candle to previous one to determine most recent price action
+ichi.compare <- function(cloud.data) {
+  current.candle = ichi.candle.check(cloud.data[1,])
+  prev.candle = ichi.candle.check(cloud.data[2,])
+  
+  if (prev.candle == current.candle) {
+    return(current.candle)
+  }
+  
+  if ((prev.candle == "above green cloud") &&
+      (current.candle == "inside green cloud")) {
+    return("broken into green cloud")
+  }
+
+  if (((prev.candle == "above green cloud") || (prev.candle == "inside green cloud")) &&
+      (current.candle == "below green cloud")) {
+    return("broken through green cloud")
+  }
+  
+  if (((prev.candle == "inside green cloud") || (prev.candle == "below green cloud")) &&
+      (current.candle == "above green cloud")) {
+    return("bounced off green cloud support")
+  }
+  
+  if ((prev.candle == "below green cloud") &&
+      (current.candle == "inside green cloud")) {
+    return(current.candle)
+  }
+  
+  if ((prev.candle == "below red cloud") &&
+      (current.candle == "inside red cloud")) {
+    return("broken into red cloud")
+  }
+  
+  if (((prev.candle == "below red cloud") || (prev.candle == "inside green cloud")) &&
+      (current.candle == "above red cloud")) {
+    return("broken through red cloud")
+  }
+  
+  if (((prev.candle == "inside red cloud") || (prev.candle == "above red cloud")) &&
+      (current.candle == "below red cloud")) {
+    return("bounced off red cloud support")
+  }
+  
+  if ((prev.candle == "above red cloud") &&
+      (current.candle == "inside red cloud")) {
+    return(current.candle)
+  }
+
+  return(": the clouds seem too thin to make a prediction right now.")
+}
+
+# runs script
+candles <- fromJSON(input[[1]])
+colnames(candles) <- c("time", "open", "high", "low", "close", "volume", "closeTime", 
+                    "assetVolume", "trades", "buyBaseVolume", "buyAssetVolume", "ignored")
+HLC = cbind(candles["high"], candles["low"], candles["close"])
 clouds <- ichimoku(HLC)
 clouds <- cbind(clouds, HLC, stringsAsFactors=FALSE)
-ichi.check(clouds)
+ichi.compare(clouds)

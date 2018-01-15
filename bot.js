@@ -33,7 +33,6 @@ binance.options({
 //-----------------------
 //-----------------------
 
-
 // checks Binance market for price
 function check_price(market="ETHBTC", channelID) {
   binance.prices(function(ticker) {
@@ -58,15 +57,93 @@ function check_volume(market="ETHBTC", channelID) {
 function check_ichimoku(market="ETHBTC", channelID) {
   bot.sendMessage({to: channelID, message: "Checking market.."});
   binance.candlesticks(market, "5m", function(ticks, symbol) {
-    // converts from array (as delivered from Binance API) to JSON
-    for (var i in ticks) {ticks[i] = Object.assign({}, ticks[i])}
+    if (ticks.msg != "Invalid symbol.") {
+      // converts from array (as delivered from Binance API) to JSON
+      for (var i in ticks) {ticks[i] = Object.assign({}, ticks[i])}
 
-    // loads JSON into R and runs analysis
-    var analysis = R("ta-tools/ichimoku.R")
-                    .data(JSON.stringify(ticks))
-                    .callSync()
 
-    bot.sendMessage({to: channelID, message: market + analysis});
+      // loads JSON into R and runs analysis
+      try {
+        var analysis = R("ta-tools/ichimoku.R")
+                       .data(JSON.stringify(ticks))
+                       .callSync()
+      }
+      catch(err) {
+        console.log(err)
+      }
+
+      // parse analysis results
+      switch (analysis) {
+        case "above green cloud":
+          analysis = "is above the green cloud. Uptrending market with support."
+          break;
+
+        case "above red cloud":
+          analysis = "is above the red cloud."
+          break;
+
+        case "inside green cloud":
+          analysis = "is inside the cloud. Careful trading."
+          break;
+
+        case "inside red cloud":
+          analysis = "is inside the cloud. Careful trading."
+          break;
+
+        case "below green cloud":
+          analysis = "is below the green cloud."
+          break;
+
+        case "below red cloud":
+          analysis = "is below the red cloud. Downtrending market with support."
+          break;
+
+        case "broken into green cloud":
+          analysis = "has recently broken into the green cloud!"
+          break;
+
+        case "broken through green cloud":
+          analysis = "has completely broken through the green cloud! "
+                       + "Support broken. Watch for reversal. "
+                       + ":chart_with_downwards_trend:"
+          break;
+
+        case "bounced off green cloud support":
+          analysis = "has recently bounced off support. "
+                      + "Currently back above the green cloud."
+          break;
+
+        case "broken into red cloud":
+          analysis = "has recently broke into the red cloud!"
+          break;
+
+        case "broken through red cloud":
+          analysis = "has completely broken through the red cloud! "
+                      + "Support broken. Watch for reversal. "
+                      + ":chart_with_upwards_trend:"
+          break;
+
+        case "bounced off red cloud support":
+          analysis = "has recently bounced off support. "
+                        + "Currently back below the red cloud."
+          break;
+
+        default: analysis = analysis
+      }
+
+      if (analysis != undefined) {
+        bot.sendMessage({to: channelID, message: market + ' ' + analysis});
+      }
+      else {
+        bot.sendMessage({to: channelID, message:
+          "Sorry, had trouble reading markets"});
+      }
+    }
+
+    else {
+      bot.sendMessage({to: channelID, message:
+      "Didn't recognize that symbol. Try again?"});
+    }
   }, {limit: 1, endTime: 1514764800000});
 }
 
@@ -77,7 +154,6 @@ function check_ichimoku(market="ETHBTC", channelID) {
 // DISCORD BOT LISTENERS
 //-----------------------
 //-----------------------
-
 
 // launches bot
 var bot = new Discord.Client({
@@ -129,7 +205,6 @@ bot.on('message', function (user, userID, channelID, message, evt) {
            var market = param
            check_ichimoku(market, channelID)
          }
-
      }
 });
 
@@ -138,7 +213,6 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 // -----------------------
 // CONFIGURATION FUNCTIONS
 // -----------------------
-
 
 // fetches list of available markets from Binance API;
 // markets are usually stored locally but may need if new markets are added

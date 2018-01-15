@@ -17,7 +17,7 @@ Here's a list of commands users can use with CryptoBot. Note that all markets mu
 
 `!help` provides a list of commands available to the user
 
-`!price <MARKET>` returns the current 24-hour volume of a specified market on Binance
+`!price <MARKET>` returns the current price of a specified market on Binance
 
 `!vol <MARKET>` returns the current 24-hour volume of a specified market on Binance
 
