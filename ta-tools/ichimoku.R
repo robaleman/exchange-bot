@@ -34,29 +34,29 @@ ichimoku <- function(HLC, nFast=20, nMed=60, nSlow=120) {
 ichi.candle.check <- function(cloud.data) {
   spanA <- cloud.data[3]
   spanB <- cloud.data[4]
-  close <- cloud.data[9]
+  close <- cloud.data[11]
   
-  if (close > spanA & spanA > spanB) {
+  if (close >= spanA & spanA >= spanB) {
     return("above green cloud")
   }
   
-  if (spanA > close & close > spanB) {
+  if (spanA >= close & close >= spanB) {
     return("inside green cloud")
   }
   
-  if (spanA > spanB & spanB > close) {
+  if (spanA >= spanB & spanB >= close) {
     return("below green cloud")
   }
   
-  if (spanB > spanA & spanA > close) {
+  if (spanB >= spanA & spanA >= close) {
     return("below red cloud")
   }
   
-  if (spanB > close & close > spanA) {
+  if (spanB >= close & close >= spanA) {
     return("inside red cloud")
   }
   
-  if (close > spanB & spanB > spanA) {
+  if (close >= spanB & spanB >= spanA) {
     return("above red cloud")
   }
 }
@@ -64,8 +64,9 @@ ichi.candle.check <- function(cloud.data) {
 
 # compares current candle to previous one to determine most recent price action
 ichi.compare <- function(cloud.data) {
-  current.candle = ichi.candle.check(cloud.data[1,])
-  prev.candle = ichi.candle.check(cloud.data[2,])
+  last.candle.index = length(cloud.data)
+  current.candle = ichi.candle.check(cloud.data[last.candle.index,])
+  prev.candle = ichi.candle.check(cloud.data[last.candle.index-1,])
   
   if (prev.candle == current.candle) {
     return(current.candle)
@@ -114,11 +115,14 @@ ichi.compare <- function(cloud.data) {
   return(": the clouds seem too thin to make a prediction right now.")
 }
 
-# runs script
+
+# loads data and runs script
 candles <- fromJSON(input[[1]])
 colnames(candles) <- c("time", "open", "high", "low", "close", "volume", "closeTime", 
                     "assetVolume", "trades", "buyBaseVolume", "buyAssetVolume", "ignored")
-HLC = cbind(candles["high"], candles["low"], candles["close"])
-clouds <- ichimoku(HLC)
-clouds <- cbind(clouds, HLC, stringsAsFactors=FALSE)
+
+hlc = cbind(candles["high"], candles["low"], candles["close"])
+clouds <- ichimoku(hlc)
+clouds <- cbind(clouds, hlc, stringsAsFactors=FALSE)
+
 ichi.compare(clouds)

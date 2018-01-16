@@ -36,31 +36,43 @@ binance.options({
 // checks Binance market for price
 function check_price(market="ETHBTC", channelID) {
   binance.prices(function(ticker) {
-    bot.sendMessage({
-      to: channelID,
-      message: market + " price: " + ticker[market]
-    });
+    if (ticker.msg != "Invalid symbol.") {
+      bot.sendMessage({
+        to: channelID,
+        message: market + " price: " + ticker[market]
+      });
+    }
+    else {
+      bot.sendMessage({to: channelID, message:
+      "Didn't recognize that symbol. Try again?"});
+    }
   });
 }
 
 // checks Binance market for volume
 function check_volume(market="ETHBTC", channelID) {
   binance.prevDay(market, function(prevDay, symbol) {
-    bot.sendMessage({
-      to: channelID,
-      message: market + " 24h volume: " + prevDay.volume.toString()
-    });
+    if (prevDay.msg != "Invalid symbol.") {
+      bot.sendMessage({
+        to: channelID,
+        message: market + " 24h volume: " + prevDay.volume.toString()
+      });
+    }
+    else {
+      bot.sendMessage({to: channelID, message:
+      "Didn't recognize that symbol. Try again?"});
+    }
   });
 }
 
 // runs Ichimoku TA on a market and returns the resulting analysis
 function check_ichimoku(market="ETHBTC", channelID) {
   bot.sendMessage({to: channelID, message: "Checking market.."});
-  binance.candlesticks(market, "5m", function(ticks, symbol) {
+  binance.candlesticks(market, "1h", function(ticks, symbol) {
     if (ticks.msg != "Invalid symbol.") {
+
       // converts from array (as delivered from Binance API) to JSON
       for (var i in ticks) {ticks[i] = Object.assign({}, ticks[i])}
-
 
       // loads JSON into R and runs analysis
       try {
@@ -69,7 +81,7 @@ function check_ichimoku(market="ETHBTC", channelID) {
                        .callSync()
       }
       catch(err) {
-        console.log(err)
+        console.log("R-Script threw an error: " + err)
       }
 
       // parse analysis results
@@ -136,7 +148,7 @@ function check_ichimoku(market="ETHBTC", channelID) {
       }
       else {
         bot.sendMessage({to: channelID, message:
-          "Sorry, had trouble reading markets"});
+          "Sorry, had trouble reading markets."});
       }
     }
 
@@ -144,7 +156,7 @@ function check_ichimoku(market="ETHBTC", channelID) {
       bot.sendMessage({to: channelID, message:
       "Didn't recognize that symbol. Try again?"});
     }
-  }, {limit: 1, endTime: 1514764800000});
+  }, {limit: 150});
 }
 
 
@@ -183,6 +195,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
           bot.sendMessage({
             to: channelID,
             message: "This is CryptoBot! Here's a list of commands. \n" +
+            "!price MARKET : gives the price for a specified market \n" +
             "!vol MARKET : gives the volume for a specified market \n" +
             "!ichi MARKET : gives whether a specific market is within its Ichimoku cloud"
           });
@@ -190,21 +203,21 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 
         //  price command
         if (command == "price") {
-          var market = param
+          var market = param.toUpperCase()
           check_price(market, channelID)
         }
 
         // volume command
         if (command == "vol") {
-          var market = param
+          var market = param.toUpperCase()
           check_volume(market, channelID)
          }
 
-         // ichimoku command
-         if (command == "ichi") {
-           var market = param
-           check_ichimoku(market, channelID)
-         }
+        // ichimoku command
+        if (command == "ichi") {
+          var market = param.toUpperCase()
+          check_ichimoku(market, channelID)
+        }
      }
 });
 
