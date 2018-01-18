@@ -14,9 +14,10 @@ var settings = require("./config.json");
 // loads all necessary local data
 var markets = require('./markets.json').markets;
 
+
 // loads all packages used
 var schedule = require('node-schedule');
-var R = require("r-script");
+var R = require("r-script-with-bug-fixes");
 
 // connect to Binance API using Node Binance API wrapper
 const binance = require('node-binance-api');
@@ -34,8 +35,8 @@ binance.options({
 //-----------------------
 
 // checks Binance market for price
-function check_price(market="ETHBTC", channelID) {
-  binance.prices(function(ticker) {
+function check_price(market="BTCUSDT", channelID) {
+  binance.prices(function(error, ticker) {
     if (ticker.msg != "Invalid symbol.") {
       bot.sendMessage({
         to: channelID,
@@ -49,9 +50,39 @@ function check_price(market="ETHBTC", channelID) {
   });
 }
 
+// checks Binance market for price and converts to USD
+function check_price_USD(market="BTCUSDT", channelID) {
+  binance.prices(function(error, ticker) {
+    if (ticker.market != undefined) {
+      var exchange_rate = 1
+      if (market.endsWith("BTC")) {
+        exchange_rate = ticker["BTCUSDT"]
+      }
+      if (market.endsWith("ETH")) {
+        exchange_rate = ticker["ETHUSDT"]
+      }
+      if (market.endsWith("BNB")) {
+        exchange_rate = ticker["BNBUSDT"]
+      }
+
+      price = exchange_rate * ticker[market]
+
+      bot.sendMessage({
+        to: channelID,
+        message: market + " price: " + price
+      });
+
+    }
+    else {
+      bot.sendMessage({to: channelID, message:
+      "Didn't recognize that symbol. Try again?"});
+    }
+  });
+}
+
 // checks Binance market for volume
-function check_volume(market="ETHBTC", channelID) {
-  binance.prevDay(market, function(prevDay, symbol) {
+function check_volume(market="BTCUSDT", channelID) {
+  binance.prevDay(market, function(error, prevDay, symbol) {
     if (prevDay.msg != "Invalid symbol.") {
       bot.sendMessage({
         to: channelID,
@@ -65,24 +96,32 @@ function check_volume(market="ETHBTC", channelID) {
   });
 }
 
+
+// helper function
+function run_ichimoku(ticks) {
+  // converts from array to JSON for easier loading into R
+  for (var i in ticks) {ticks[i] = Object.assign({}, ticks[i])}
+
+  try {
+    var analysis = R("ta-tools/ichimoku.R")
+                   .data(JSON.stringify(ticks))
+                   .callSync()
+  }
+  catch(err) {
+    console.log("R-Script threw an error: " + err)
+  }
+
+  return analysis
+}
+
 // runs Ichimoku TA on a market and returns the resulting analysis
-function check_ichimoku(market="ETHBTC", channelID) {
+function check_ichimoku(market="BTCUSDT", channelID) {
   bot.sendMessage({to: channelID, message: "Checking market.."});
-  binance.candlesticks(market, "1h", function(ticks, symbol) {
+  binance.candlesticks(market, "1h", function(error, ticks, symbol) {
     if (ticks.msg != "Invalid symbol.") {
 
-      // converts from array (as delivered from Binance API) to JSON
-      for (var i in ticks) {ticks[i] = Object.assign({}, ticks[i])}
 
-      // loads JSON into R and runs analysis
-      try {
-        var analysis = R("ta-tools/ichimoku.R")
-                       .data(JSON.stringify(ticks))
-                       .callSync()
-      }
-      catch(err) {
-        console.log("R-Script threw an error: " + err)
-      }
+      analysis = run_ichimoku(ticks)
 
       // parse analysis results
       switch (analysis) {
@@ -187,8 +226,11 @@ bot.on('message', function (user, userID, channelID, message, evt) {
     // filters only for commands that start with '!'
     if (message.substring(0, 1) == '!') {
         var args = message.substring(1).split(' ');
-        var command = args[0];
+        var command = args[0]
         var param = args[1]
+        if (param != undefined ) {
+          param = param.toUpperCase()
+        }
 
         // help command
         if (command == "help") {
@@ -196,29 +238,116 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             to: channelID,
             message: "This is CryptoBot! Here's a list of commands. \n" +
             "!price MARKET : gives the price for a specified market \n" +
+            "!priceUSD MARKET : gives the price for a specified market in US dollars \n" +
             "!vol MARKET : gives the volume for a specified market \n" +
-            "!ichi MARKET : gives whether a specific market is within its Ichimoku cloud"
+            "!ichi MARKET : gives whether a specific market is within its Ichimoku cloud \n" +
+            "!alert : toggles whether or not you want to receive 15m Ichimoku cloud updates"
           });
         }
 
         //  price command
         if (command == "price") {
-          var market = param.toUpperCase()
+          var market = param
           check_price(market, channelID)
+        }
+
+        //  price command
+        if (command == "priceUSD") {
+          var market = param
+          check_price_USD(market, channelID)
         }
 
         // volume command
         if (command == "vol") {
-          var market = param.toUpperCase()
+          var market = param
           check_volume(market, channelID)
          }
 
         // ichimoku command
         if (command == "ichi") {
-          var market = param.toUpperCase()
+          var market = param
           check_ichimoku(market, channelID)
         }
+
+        // alert command for toggling Ichimoku indicator
+        if (command == "alert") {
+          var indicator = param
+
+          if (ichi_alert === "on" ) { ichi_alert = "off" }
+          if (ichi_alert === "off") { ichi_alert = "on"  }
+
+          bot.sendMessage({
+            to: channelID,
+            message: "Ichimoku indicator is now " + ichi_alert + "!"
+          });
+        }
      }
+});
+
+
+
+// ----------------
+// ----------------
+// SCHEDULED EVENTS
+// ----------------
+// ----------------
+
+const ALERT_CHANNEL = settings.alert_channelID
+const ALERT_FREQUENCY = "0,15,30,45 * * * *"   // default every 15 mins
+
+var ichi_alert = "on"
+
+
+// ichimoku scheduled alert system
+var j = ichiAlert.scheduleJob(ALERT_FREQUENCY, function(){
+
+  if (ichi_alert === "on") {
+  function analyzeMarkets(i) {
+    if (i < markets.length) {
+
+      console.log("Analyzing..")
+      binance.candlesticks(markets[i], "5m", function(error, ticks, symbol) {
+
+        // recursively convert array into stringified JSON
+        function jsonify(ticks, i) {
+          if (i < ticks.length) {
+            ticks[i] = Object.assign({}, ticks[i])
+            jsonify(ticks, i+1)
+          }
+        }
+        candlesticks_data = JSON.stringify(jsonify(ticks,0))
+
+        R("ta-tools/ichimoku.R").data(candlesticks_data)
+          .call(function(err, analysis) {
+          console.log(analysis)
+          if (analysis == "broken into green cloud") {
+            console.log('test')
+            bot.sendMessage({to: ALERT_CHANNEL,
+              message: symbol + ': ' + analysis});
+            }
+          if (analysis == "broken into red cloud") {
+            console.log('test')
+            bot.sendMessage({to: ALERT_CHANNEL,
+              message: symbol + ': ' + analysis});
+            }
+          if (analysis == "broken through green cloud") {
+            console.log('test')
+            bot.sendMessage({to: ALERT_CHANNEL,
+              message: symbol + ': ' + analysis});
+            }
+          if (analysis == "broken through red cloud") {
+            console.log('test')
+            bot.sendMessage({to: ALERT_CHANNEL,
+              message: symbol + ': ' + analysis});
+            }
+          analyzeMarkets(i+1)
+
+        })
+      }, {limit: 150});
+    }
+  }
+  analyzeMarkets(0)
+  }
 });
 
 
