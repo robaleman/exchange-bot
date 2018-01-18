@@ -299,13 +299,11 @@ var ichi_alert = "on"
 
 
 // ichimoku scheduled alert system
-var j = ichiAlert.scheduleJob(ALERT_FREQUENCY, function(){
+var ichiAlertSystem = schedule.scheduleJob(ALERT_FREQUENCY, function(){
 
   if (ichi_alert === "on") {
   function analyzeMarkets(i) {
     if (i < markets.length) {
-
-      console.log("Analyzing..")
       binance.candlesticks(markets[i], "5m", function(error, ticks, symbol) {
 
         // recursively convert array into stringified JSON
@@ -315,28 +313,24 @@ var j = ichiAlert.scheduleJob(ALERT_FREQUENCY, function(){
             jsonify(ticks, i+1)
           }
         }
-        candlesticks_data = JSON.stringify(jsonify(ticks,0))
+        jsonify(ticks,0)
+        candlesticks_data = JSON.stringify(ticks)
 
         R("ta-tools/ichimoku.R").data(candlesticks_data)
           .call(function(err, analysis) {
-          console.log(analysis)
           if (analysis == "broken into green cloud") {
-            console.log('test')
             bot.sendMessage({to: ALERT_CHANNEL,
               message: symbol + ': ' + analysis});
             }
           if (analysis == "broken into red cloud") {
-            console.log('test')
             bot.sendMessage({to: ALERT_CHANNEL,
               message: symbol + ': ' + analysis});
             }
           if (analysis == "broken through green cloud") {
-            console.log('test')
             bot.sendMessage({to: ALERT_CHANNEL,
               message: symbol + ': ' + analysis});
             }
           if (analysis == "broken through red cloud") {
-            console.log('test')
             bot.sendMessage({to: ALERT_CHANNEL,
               message: symbol + ': ' + analysis});
             }
