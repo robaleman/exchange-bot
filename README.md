@@ -2,7 +2,14 @@
 A bot for [Discord](https://discordapp.com/) that provides utilities for cryptocurrency traders. Run it in your Discord server and users can call various commands that fetch current information from crypto-exchanges like Binance, or he can be toggled to send alerts during unusual price action. CryptoBuddy is built in Node.js and uses R to make technical analysis calls. 
 
 ## Bot Setup
-Install the latest versions of Node.js and the [Node Binance API wrapper](https://github.com/jaggedsoft/node-binance-api), as well as any other dependencies needed. Clone or download this repository. Replace the token in the `auth.json` with the your own token generated from the [app section of your Discord account](https://discordapp.com/developers/applications/me). Add the bot to your server.
+First, make sure you have installed the latest versions of Node.js. Clone or download this repository. You will then need to install the following dependencies through NPM. Run:
+
+```
+npm install node-binance-api node-schedule r-script-with-bug-fixes
+npm install discord.io
+```
+
+Replace the token in the `auth.json` with the your own token generated from the [app section of your Discord account](https://discordapp.com/developers/applications/me), as well as replacing the channel ID parameter in the `config.json` with the ID of the channel that you want the bot to fire alerts. Add the bot to your server.
 
 When you're ready, navigate to this repo and run:
 ```
