@@ -271,8 +271,8 @@ bot.on('message', function (user, userID, channelID, message, evt) {
         if (command == "alert") {
           var indicator = param
 
-          if ( ichi_alert === "on" ) { ichi_alert = "off" }
-          if ( ichi_alert === "off") { ichi_alert = "on"  }
+          if      ( ichi_alert === "on" ) { ichi_alert = "off" }
+          else if ( ichi_alert === "off") { ichi_alert = "on"  }
 
           bot.sendMessage({
             to: channelID,
