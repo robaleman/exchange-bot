@@ -97,9 +97,11 @@ function check_volume(market="BTCUSDT", channelID) {
 
 
 // runs Ichimoku TA on a market and returns the resulting analysis
-function check_ichimoku(market="BTCUSDT", channelID) {
+function check_ichimoku(market="BTCUSDT", channelID, timeframe="1h") {
   bot.sendMessage({to: channelID, message: "Checking market.."});
-  binance.candlesticks(market, "15m", function(error, ticks, symbol) {
+  
+  // possible time-frames: 1m,3m,5m,15m,30m,1h,2h,4h,6h,8h,12h,1d,3d,1w,1M
+  binance.candlesticks(market, timeframe, function(error, ticks, symbol) {
     if (ticks.msg != "Invalid symbol.") {
 
       analysis = run_ichimoku(ticks)
@@ -164,7 +166,7 @@ function check_ichimoku(market="BTCUSDT", channelID) {
       }
 
       if (analysis != undefined) {
-        bot.sendMessage({to: channelID, message: market + ' ' + analysis});
+        bot.sendMessage({to: channelID, message: market + ' timeframe ' + analysis});
       }
       else {
         bot.sendMessage({to: channelID, message:
@@ -226,6 +228,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
         var args = message.substring(1).split(' ');
         var command = args[0]
         var param = args[1]
+        var param2 = args[2]
         if (param != undefined ) {
           param = param.toUpperCase()
         }
@@ -264,7 +267,8 @@ bot.on('message', function (user, userID, channelID, message, evt) {
         // ichimoku command
         if (command == "ichi") {
           var market = param
-          check_ichimoku(market, channelID)
+          var timeframe = param2
+          check_ichimoku(market, channelID, timeframe)
         }
 
         // alert command for toggling Ichimoku indicator
