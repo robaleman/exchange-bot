@@ -99,7 +99,7 @@ function check_volume(market="BTCUSDT", channelID) {
 // runs Ichimoku TA on a market and returns the resulting analysis
 function check_ichimoku(market="BTCUSDT", channelID, timeframe="1h") {
   bot.sendMessage({to: channelID, message: "Checking market.."});
-  
+
   // possible time-frames: 1m,3m,5m,15m,30m,1h,2h,4h,6h,8h,12h,1d,3d,1w,1M
   binance.candlesticks(market, timeframe, function(error, ticks, symbol) {
     if (ticks.msg != "Invalid symbol.") {
@@ -165,15 +165,19 @@ function check_ichimoku(market="BTCUSDT", channelID, timeframe="1h") {
         default: analysis = analysis
       }
 
+      // on success
       if (analysis != undefined) {
         bot.sendMessage({to: channelID, message: market + ' timeframe ' + analysis});
       }
+
+      // failure to connect to Binance API
       else {
         bot.sendMessage({to: channelID, message:
           "Sorry, had trouble reading markets."});
       }
     }
 
+    // if user enters invalid symbol or improper format
     else {
       bot.sendMessage({to: channelID, message:
       "Didn't recognize that symbol. Try again?"});
@@ -187,10 +191,10 @@ function run_ichimoku(ticks) {
   for (var i in ticks) {ticks[i] = Object.assign({}, ticks[i])}
 
   try {
-    var analysis = R("ta-tools/ichimoku.R")
-                   .data(JSON.stringify(ticks))
-                   .callSync()
+    var analysis = R("ta-tools/ichimoku.R").data(JSON.stringify(ticks))
+                                           .callSync()
   }
+
   catch(err) {
     console.log("R-Script threw an error: " + err)
   }
@@ -213,7 +217,9 @@ var bot = new Discord.Client({
 });
 
 
+
 // actions that launch upon bot startup
+
 bot.on('ready', function (evt) {
     console.log('Connected');
     console.log('Logged in as: ' + bot.username + '-' + bot.id);
@@ -288,6 +294,13 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 });
 
 
+// shut down if bot is not properly configured
+if (auth.token == "YOUR_AUTH_TOKEN_HERE") {
+  console.log("ERROR: You have not specified your bot's authentication token!")
+  console.log("Find your bot's auth token and place it in the auth.json file")
+  process.exit()
+}
+
 
 // ----------------
 // ----------------
@@ -310,7 +323,7 @@ var ichiAlertSystem = schedule.scheduleJob(ALERT_FREQUENCY, function(){
     if (i < markets.length) {
       binance.candlesticks(markets[i], interval, function(error, ticks, symbol) {
 
-        // recursively convert array into stringified JSON
+        // converts the weirdly formatted market data into stringified JSON
         function jsonify(ticks, i) {
           if (i < ticks.length) {
             ticks[i] = Object.assign({}, ticks[i])
@@ -320,28 +333,33 @@ var ichiAlertSystem = schedule.scheduleJob(ALERT_FREQUENCY, function(){
         jsonify(ticks,0)
         candlesticks_data = JSON.stringify(ticks)
 
-        R("ta-tools/ichimoku.R").data(candlesticks_data)
-          .call(function(err, analysis) {
-            console.log(analysis)
-          if (analysis == "broken into green cloud") {
-            bot.sendMessage({to: ALERT_CHANNEL,
-              message: symbol + ': recently ' + analysis + " on the " + interval});
-            }
-          if (analysis == "broken into red cloud") {
-            bot.sendMessage({to: ALERT_CHANNEL,
-              message: symbol + ': recently ' + analysis + " on the " + interval});
-            }
-          if (analysis == "broken through green cloud") {
-            bot.sendMessage({to: ALERT_CHANNEL,
-              message: symbol + ': recently ' + analysis + " on the " + interval});
-            }
-          if (analysis == "broken through red cloud") {
-            bot.sendMessage({to: ALERT_CHANNEL,
-              message: symbol + ': recently ' + analysis + " on the " + interval});
-            }
-          analyzeMarkets(i+1)
+        try {
+          R("ta-tools/ichimoku.R").data(candlesticks_data)
+            .call(function(err, analysis) {
+              console.log(analysis)
+            if (analysis == "broken into green cloud") {
+              bot.sendMessage({to: ALERT_CHANNEL,
+                message: symbol + ': recently ' + analysis + " on the " + interval});
+              }
+            if (analysis == "broken into red cloud") {
+              bot.sendMessage({to: ALERT_CHANNEL,
+                message: symbol + ': recently ' + analysis + " on the " + interval});
+              }
+            if (analysis == "broken through green cloud") {
+              bot.sendMessage({to: ALERT_CHANNEL,
+                message: symbol + ': recently ' + analysis + " on the " + interval});
+              }
+            if (analysis == "broken through red cloud") {
+              bot.sendMessage({to: ALERT_CHANNEL,
+                message: symbol + ': recently ' + analysis + " on the " + interval});
+              }
+            analyzeMarkets(i+1)
+          })
+        }
+        catch(err) {
+          console.log("R-Script threw an error: " + err)
+        }
 
-        })
       }, {limit: 125});
     }
   }
