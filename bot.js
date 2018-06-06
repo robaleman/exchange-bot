@@ -39,7 +39,7 @@ function check_price(market="BTCUSDT", channelID) {
     if (ticker.msg != "Invalid symbol.") {
       bot.sendMessage({
         to: channelID,
-        message: market + " price: " + ticker[market]
+        message: market + " price: " + ticker[market] + markets
       });
     }
     else {
@@ -52,7 +52,7 @@ function check_price(market="BTCUSDT", channelID) {
 // checks Binance market for price and converts to USD
 function check_price_USD(market="BTCUSDT", channelID) {
   binance.prices(function(error, ticker) {
-    if (ticker.market != undefined) {
+    if (ticker.msg != "Invalid symbol.") {
       var exchange_rate = 1
       if (market.endsWith("BTC")) {
         exchange_rate = ticker["BTCUSDT"]
@@ -95,6 +95,13 @@ function check_volume(market="BTCUSDT", channelID) {
   });
 }
 
+// lists all available excahange markets on Binance
+function check_markets(channelID) {
+    bot.sendMessage({
+      to: channelID,
+      message: "Here are the available markets: " + markets
+    });
+}
 
 // runs Ichimoku TA on a market and returns the resulting analysis
 function check_ichimoku(market="BTCUSDT", channelID, timeframe="1h") {
@@ -105,65 +112,9 @@ function check_ichimoku(market="BTCUSDT", channelID, timeframe="1h") {
     if (ticks.msg != "Invalid symbol.") {
 
       analysis = run_ichimoku(ticks)
-
-      // parse analysis results
-      switch (analysis) {
-        case "above green cloud":
-          analysis = "is above the green cloud. Uptrending market with support."
-          break;
-
-        case "above red cloud":
-          analysis = "is above the red cloud."
-          break;
-
-        case "inside green cloud":
-          analysis = "is inside the cloud. Careful trading."
-          break;
-
-        case "inside red cloud":
-          analysis = "is inside the cloud. Careful trading."
-          break;
-
-        case "below green cloud":
-          analysis = "is below the green cloud."
-          break;
-
-        case "below red cloud":
-          analysis = "is below the red cloud. Downtrending market with support."
-          break;
-
-        case "broken into green cloud":
-          analysis = "has recently broken into the green cloud!"
-          break;
-
-        case "broken through green cloud":
-          analysis = "has completely broken through the green cloud! "
-                       + "Support broken. Watch for reversal. "
-                       + ":chart_with_downwards_trend:"
-          break;
-
-        case "bounced off green cloud support":
-          analysis = "has recently bounced off support. "
-                      + "Currently back above the green cloud."
-          break;
-
-        case "broken into red cloud":
-          analysis = "has recently broke into the red cloud!"
-          break;
-
-        case "broken through red cloud":
-          analysis = "has completely broken through the red cloud! "
-                      + "Support broken. Watch for reversal. "
-                      + ":chart_with_upwards_trend:"
-          break;
-
-        case "bounced off red cloud support":
-          analysis = "has recently bounced off support. "
-                        + "Currently back below the red cloud."
-          break;
-
-        default: analysis = analysis
-      }
+      console.log(analysis)
+      analysis = parse_results(analysis)
+      console.log(analysis)
 
       // on success
       if (analysis != undefined) {
@@ -185,6 +136,12 @@ function check_ichimoku(market="BTCUSDT", channelID, timeframe="1h") {
   }, {limit: 125});
 }
 
+
+///........................
+/// AUXILLARY FUNCTIONS ...
+///........................
+
+
 // helper function for check_ichimoku
 function run_ichimoku(ticks) {
   // converts from array to JSON for easier loading into R
@@ -199,6 +156,68 @@ function run_ichimoku(ticks) {
     console.log("R-Script threw an error: " + err)
   }
 
+  return analysis
+}
+
+// helper function that handles all chat messaging
+function parse_results(analysis) {
+  switch (analysis) {
+    case "above green cloud":
+      analysis = "is above the green cloud. Uptrending market with support."
+      break;
+
+    case "above red cloud":
+      analysis = "is above the red cloud."
+      break;
+
+    case "inside green cloud":
+      analysis = "is inside the cloud. Careful trading."
+      break;
+
+    case "inside red cloud":
+      analysis = "is inside the cloud. Careful trading."
+      break;
+
+    case "below green cloud":
+      analysis = "is below the green cloud."
+      break;
+
+    case "below red cloud":
+      analysis = "is below the red cloud. Downtrending market with support."
+      break;
+
+    case "broken into green cloud":
+      analysis = "has recently broken into the green cloud!"
+      break;
+
+    case "broken through green cloud":
+      analysis = "has completely broken through the green cloud! "
+                   + "Support broken. Watch for reversal. "
+                   + ":chart_with_downwards_trend:"
+      break;
+
+    case "bounced off green cloud support":
+      analysis = "has recently bounced off support. "
+                  + "Currently back above the green cloud."
+      break;
+
+    case "broken into red cloud":
+      analysis = "has recently broke into the red cloud!"
+      break;
+
+    case "broken through red cloud":
+      analysis = "has completely broken through the red cloud! "
+                  + "Support broken. Watch for reversal. "
+                  + ":chart_with_upwards_trend:"
+      break;
+
+    case "bounced off red cloud support":
+      analysis = "has recently bounced off support. "
+                    + "Currently back below the red cloud."
+      break;
+
+    default: analysis = analysis
+  }
   return analysis
 }
 
@@ -219,7 +238,6 @@ var bot = new Discord.Client({
 
 
 // actions that launch upon bot startup
-
 bot.on('ready', function (evt) {
     console.log('Connected');
     console.log('Logged in as: ' + bot.username + '-' + bot.id);
@@ -247,6 +265,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             "!price MARKET : gives the price for a specified market \n" +
             "!priceUSD MARKET : gives the price for a specified market in US dollars \n" +
             "!vol MARKET : gives the volume for a specified market \n" +
+            "!markets : gives the list of available market \n" +
             "!ichi MARKET : gives whether a specific market is within its Ichimoku cloud \n" +
             "!alert : toggles whether or not you want to receive 15m Ichimoku cloud updates"
           });
@@ -268,6 +287,11 @@ bot.on('message', function (user, userID, channelID, message, evt) {
         if (command == "vol") {
           var market = param
           check_volume(market, channelID)
+         }
+
+         // markets command
+         if (command == "markets") {
+           check_markets(channelID)
          }
 
         // ichimoku command
@@ -376,7 +400,7 @@ var ichiAlertSystem = schedule.scheduleJob(ALERT_FREQUENCY, function(){
 // fetches list of available markets from Binance API;
 // markets are usually stored locally but may need if new markets are added
 function refreshMarkets() {
-    binance.prices(function(ticker) {
-        console.log(JSON.stringify(Object.keys(ticker)).length);
+    binance.prices(function(error, ticker) {
+        return JSON.stringify(Object.keys(ticker))
     });
 }

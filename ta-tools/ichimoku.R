@@ -15,7 +15,9 @@
 # "buyBaseVolume", "buyAssetVolume", "ignored").
 #
 # Output: String containing analysis.
-################################################################################
+#
+#
+
 suppressMessages(library(jsonlite))
 suppressMessages(library(caTools))
 suppressMessages(library(quantmod))

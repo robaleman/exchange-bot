@@ -1,5 +1,5 @@
 # CryptoBuddy Bot for Discord
-A bot for [Discord](https://discordapp.com/) that provides utilities for cryptocurrency traders. Run it in your Discord server and users can call various commands that fetch current information from crypto-exchanges like Binance, or he can be toggled to send alerts during unusual price action. CryptoBuddy is built in Node.js and uses R to make technical analysis calls. 
+A bot for [Discord](https://discordapp.com/) that provides utilities for cryptocurrency traders. Run it in your Discord server and users can call various commands that fetch current information from crypto-exchanges like Binance, or he can be toggled to send alerts during unusual price action. CryptoBuddy is built in Node.js and uses R to make technical analysis calls.
 
 ## Bot Setup
 First, make sure you have installed the latest versions of Node.js. Clone or download this repository. You will then need to install the following dependencies through NPM. Run:
@@ -30,8 +30,15 @@ Here's a list of commands users can use with CryptoBot. Note that all markets mu
 
 `!vol <MARKET>` returns the current 24-hour volume of a specified market on Binance.
 
+`!markets` returns the current list of markets available on Binance
+
 `!ichi <MARKET>` calculates where the Ichimoku cloud is for a given market.
 
 `!alert` toggles Ichimoku alerts on or off; when on, will ping whenever a market has broken in or through an Ichi cloud on the 15 minute candle
 
+## Upcoming Features
+Here's the tentative list of upcoming features and updates. They are ordered in progression of upcoming updates.
 
+* New support for users to calculate with custom parameters and select different time scales.
+* Add more custom indicators such as RSI, Bollinger bands, or Donchian channels.
+* Add in chart support for indicator calls so users are given more details as to how strongly or weakly each indicator registers.
