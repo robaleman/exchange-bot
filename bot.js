@@ -265,7 +265,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             "!price MARKET : gives the price for a specified market \n" +
             "!priceUSD MARKET : gives the price for a specified market in US dollars \n" +
             "!vol MARKET : gives the volume for a specified market \n" +
-            "!markets : gives the list of available market \n" +
+            "!market : gives the list of available market \n" +
             "!ichi MARKET : gives whether a specific market is within its Ichimoku cloud \n" +
             "!alert : toggles whether or not you want to receive 15m Ichimoku cloud updates"
           });
@@ -404,3 +404,12 @@ function refreshMarkets() {
         return JSON.stringify(Object.keys(ticker))
     });
 }
+
+
+
+// ---------------------
+// FOR HEROKU DEPLOYMENT
+// ---------------------
+
+// leave this if deploying to Heroku; otherwise need to comment out
+client.login(process.env.BOT_TOKEN)
